@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { CropParams, ImageFile, CropAnchor } from '@/types';
 import { PRESET_SIZES } from '@/constants';
 
@@ -33,6 +33,17 @@ export function useCropParams(selectedImage?: ImageFile | null): UseCropParamsRe
       maintainAspectRatio: false,
     };
   });
+
+  // 记录上一次的"保持宽高比"设置
+  const maintainAspectRatioRef = useRef(false);
+
+  // 当 state 变化时，更新 ref
+  useEffect(() => {
+    // 只有当 maintainAspectRatio 被明确定义时才更新 ref
+    if (typeof cropParams.maintainAspectRatio === 'boolean') {
+      maintainAspectRatioRef.current = cropParams.maintainAspectRatio;
+    }
+  }, [cropParams.maintainAspectRatio]);
 
   // 更新部分裁剪参数
   const updateCropParams = useCallback((updates: Partial<CropParams>) => {
@@ -69,6 +80,9 @@ export function useCropParams(selectedImage?: ImageFile | null): UseCropParamsRe
     const x = (image.width - cropSize) / 2;
     const y = (image.height - cropSize) / 2;
 
+    // 使用之前记录的 maintainAspectRatio 设置
+    const defaultMaintainAspectRatio = maintainAspectRatioRef.current;
+
     setCropParams({
       width: cropSize,
       height: cropSize,
@@ -78,7 +92,7 @@ export function useCropParams(selectedImage?: ImageFile | null): UseCropParamsRe
       flipHorizontal: false,
       flipVertical: false,
       borderRadius: 0,
-      maintainAspectRatio: false,
+      maintainAspectRatio: defaultMaintainAspectRatio,
     });
   }, []);
 

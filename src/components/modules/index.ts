@@ -6,6 +6,7 @@ export { ImageImportManager } from './ImageImportManager';
 
 // 信息展示相关组件
 export { ImageInfoPanel } from './ImageInfoPanel';
+export { ImageNavigationPanel } from './ImageNavigationPanel';
 
 // 预览系统相关组件
 export { PreviewSystem } from './PreviewSystem';

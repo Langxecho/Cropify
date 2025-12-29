@@ -13,6 +13,14 @@ export interface ImageFile {
   colorMode?: string; // 色彩模式
   lastModified: number;
   cropParams?: CropParams; // 保存的裁剪参数
+  resizeTarget?: ResizeSettings; // 保存的缩放设置
+}
+
+// 缩放设置定义
+export interface ResizeSettings {
+  enabled: boolean;
+  width: number;
+  height: number;
 }
 
 // 裁剪参数定义
@@ -57,11 +65,6 @@ export interface OutputSettings {
   maintainOriginalName?: boolean;
   filenamePrefix?: string;
   filenameSuffix?: string;
-  resizeTarget?: { // 目标尺寸缩放设置
-    enabled: boolean;
-    width: number;
-    height: number;
-  };
 }
 
 // 批处理状态

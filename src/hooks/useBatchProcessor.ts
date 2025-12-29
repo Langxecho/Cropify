@@ -91,10 +91,15 @@ export function useBatchProcessor(onError: (error: AppError) => void): UseBatchP
       }
 
       // 应用裁剪和变换
-      const processedBlob = await processor.cropImage(imageElement, cropParams);
+      // 使用任务中保存的裁剪参数
+      // 缩放设置：优先使用图片保存的 resizeTarget
+      const resizeSettings = image.resizeTarget || { enabled: false, width: 1024, height: 1024 };
+
+      const processedBlob = await processor.cropImage(imageElement, task.cropParams, resizeSettings);
 
       // 更新进度：处理完成
       updateTask(task.id, { progress: 75 });
+
 
       // 检查是否被取消
       if (signal.aborted) {
@@ -201,7 +206,8 @@ export function useBatchProcessor(onError: (error: AppError) => void): UseBatchP
           imageId: image.id,
           status: ProcessStatus.PENDING,
           progress: 0,
-          cropParams: { ...cropParams },
+          // 优先使用图片保存的裁剪参数，否则使用当前全局参数
+          cropParams: image.cropParams ? { ...image.cropParams } : { ...cropParams },
           outputSettings: { ...outputSettings },
         };
       });

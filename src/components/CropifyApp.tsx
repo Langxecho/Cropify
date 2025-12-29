@@ -8,6 +8,7 @@ import {
     useViewSettings,
     useOutputSettings,
     useBatchProcessor,
+    useResizeScaling,
 } from '@/hooks';
 import {
     ImageImportManager,
@@ -19,6 +20,7 @@ import {
     AdvancedCropOptions,
     QualityControlPanel,
     BatchProcessor,
+    ImageNavigationPanel,
 } from '@/components/modules';
 import { Header } from './Header';
 import { EmptyState } from './EmptyState';
@@ -52,11 +54,12 @@ export const CropifyApp: React.FC = () => {
         retryFailed,
     } = useBatchProcessor(error => dismissError(error.id));
 
+    const { resizeSettings, setResizeSettings } = useResizeScaling(selectedImage);
+
     // 左右侧面板收起状态
     const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
     const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
 
-    // 当选中图片变化时，重置裁剪参数
     // 当选中图片变化时，重置裁剪参数（优先使用已保存的参数）
     useEffect(() => {
         resetCropParams(selectedImage, selectedImage?.cropParams);
@@ -72,8 +75,57 @@ export const CropifyApp: React.FC = () => {
         }
     }, [cropParams, selectedImageId, updateImage]);
 
+    // 自动保存缩放设置到图片对象
+    useEffect(() => {
+        if (selectedImageId && resizeSettings) {
+            // 这里不需要防抖，因为设置改变通常通过点击触发，频率低
+            updateImage(selectedImageId, { resizeTarget: resizeSettings });
+        }
+    }, [resizeSettings, selectedImageId, updateImage]);
+
+
+    // 上一张/下一张逻辑
+    const handlePrevious = () => {
+        if (!selectedImageId) return;
+        const index = images.findIndex(img => img.id === selectedImageId);
+        if (index > 0) {
+            selectImage(images[index - 1].id);
+        }
+    };
+
+    const handleNext = () => {
+        if (!selectedImageId) return;
+        const index = images.findIndex(img => img.id === selectedImageId);
+        if (index < images.length - 1) {
+            selectImage(images[index + 1].id);
+        }
+    };
+
+    // 删除逻辑
+    const handleDelete = () => {
+        if (!selectedImageId) return;
+        const index = images.findIndex(img => img.id === selectedImageId);
+        
+        // 先删除
+        removeImage(selectedImageId);
+        
+        // 尝试跳转到下一张，如果没有下一张则跳转上一张
+        if (images.length > 1) {
+            if (index < images.length - 1) {
+                // 有下一张
+                selectImage(images[index + 1].id);
+            } else {
+                // 是最后一张，跳转到前一张
+                selectImage(images[index - 1].id);
+            }
+        }
+    };
+
     // 判断是否为编辑模式
     const isEditMode = images && images.length > 0;
+    
+    // 当前索引
+    const currentIndex = selectedImageId ? images.findIndex(img => img.id === selectedImageId) : -1;
 
     // 导出相关函数
     const handleSingleDownload = (task: ProcessTask) => {
@@ -170,6 +222,15 @@ export const CropifyApp: React.FC = () => {
                     {/* 中间主内容区域 */}
                     <div className="flex-1 flex flex-col overflow-hidden">
                         <div className="flex-1 flex flex-col p-4 lg:p-6 gap-4 overflow-hidden">
+                             {/* 图片导航面板 (新) */}
+                             <ImageNavigationPanel
+                                currentIndex={currentIndex}
+                                totalImages={images.length}
+                                onPrevious={handlePrevious}
+                                onNext={handleNext}
+                                onDelete={handleDelete}
+                             />
+
                             {/* 预览系统 */}
                             <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden min-h-0">
                                 <PreviewSystem
@@ -257,7 +318,12 @@ export const CropifyApp: React.FC = () => {
                                     <div className="border-t border-gray-200"></div>
 
                                     {/* 质量控制 */}
-                                    <QualityControlPanel outputSettings={outputSettings} onSettingsChange={setOutputSettings} />
+                                    <QualityControlPanel 
+                                        outputSettings={outputSettings} 
+                                        onSettingsChange={setOutputSettings}
+                                        resizeSettings={resizeSettings}
+                                        onResizeSettingsChange={setResizeSettings}
+                                    />
 
                                     {/* 分割线 */}
                                     <div className="border-t border-gray-200"></div>
