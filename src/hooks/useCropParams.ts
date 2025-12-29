@@ -8,7 +8,7 @@ interface UseCropParamsReturn {
   cropParams: CropParams;
   setCropParams: (params: CropParams) => void;
   updateCropParams: (updates: Partial<CropParams>) => void;
-  resetCropParams: (image?: ImageFile | null) => void;
+  resetCropParams: (image?: ImageFile | null, initialParams?: CropParams) => void;
   applyCropAnchor: (anchor: CropAnchor, image: ImageFile) => void;
   applyPresetSize: (presetName: string, image: ImageFile) => void;
   applyPresetRatio: (ratioValue: number, image: ImageFile) => void;
@@ -43,7 +43,7 @@ export function useCropParams(selectedImage?: ImageFile | null): UseCropParamsRe
   }, []);
 
   // 重置裁剪参数
-  const resetCropParams = useCallback((image?: ImageFile | null) => {
+  const resetCropParams = useCallback((image?: ImageFile | null, initialParams?: CropParams) => {
     if (!image) {
       setCropParams({
         width: 200,
@@ -57,6 +57,11 @@ export function useCropParams(selectedImage?: ImageFile | null): UseCropParamsRe
         maintainAspectRatio: false,
       });
       return;
+    }
+
+    if (initialParams) {
+        setCropParams(initialParams);
+        return;
     }
 
     // 根据图片尺寸设置默认裁剪区域（居中，占原图的80%）

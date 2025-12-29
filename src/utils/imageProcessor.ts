@@ -20,9 +20,10 @@ export class ImageProcessor {
    * 应用裁剪参数到图片
    * @param imageElement 原始图片元素
    * @param cropParams 裁剪参数
+   * @param outputSettings 输出设置（可选）
    * @returns Promise<Blob> 处理后的图片Blob
    */
-  async cropImage(imageElement: HTMLImageElement, cropParams: CropParams): Promise<Blob> {
+  async cropImage(imageElement: HTMLImageElement, cropParams: CropParams, outputSettings?: { resizeTarget?: { enabled: boolean; width: number; height: number } }): Promise<Blob> {
     const { 
       width, 
       height, 
@@ -86,6 +87,38 @@ export class ImageProcessor {
     
     // 恢复状态
     this.ctx.restore();
+
+    // 处理缩放
+    if (outputSettings?.resizeTarget?.enabled) {
+        const { width: targetWidth, height: targetHeight } = outputSettings.resizeTarget;
+        
+        // 创建临时画布进行缩放
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = targetWidth;
+        tempCanvas.height = targetHeight;
+        const tempCtx = tempCanvas.getContext('2d');
+        
+        if (tempCtx) {
+            // 使用高质量插值算法 (如果浏览器支持)
+            tempCtx.imageSmoothingEnabled = true;
+            tempCtx.imageSmoothingQuality = 'high';
+            
+            // 将原始裁剪结果绘制到缩放画布
+            tempCtx.drawImage(this.canvas, 0, 0, width, height, 0, 0, targetWidth, targetHeight);
+            
+            // 将缩放后的结果复制回主画布（或者直接返回tempCanvas的blob）
+            // 这里我们直接利用 tempCanvas 生成 blob
+            return new Promise((resolve, reject) => {
+                tempCanvas.toBlob((blob) => {
+                    if (blob) {
+                         resolve(blob);
+                    } else {
+                         reject(new Error('图片缩放失败'));
+                    }
+                }, 'image/png'); // 这里可以根据 outputSettings.format 优化，目前暂定png
+            });
+        }
+    }
     
     // 转换为Blob
     return new Promise((resolve, reject) => {

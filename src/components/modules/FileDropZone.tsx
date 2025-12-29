@@ -165,7 +165,7 @@ export const FileDropZone: React.FC<FileDropZoneProps> = ({
             <p className="text-xs text-gray-400">
               支持 JPG、PNG、WebP、BMP、TIFF、GIF 格式
               <br />
-              单个文件最大 10MB，最多 {maxFiles} 张
+              最多 {maxFiles} 张
             </p>
           </div>
           

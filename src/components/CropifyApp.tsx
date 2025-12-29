@@ -30,7 +30,7 @@ import { ProcessTask } from '@/types';
  * Cropify 主应用组件
  */
 export const CropifyApp: React.FC = () => {
-    const { images, isUploading, errors, addImages, removeImage, clearImages, clearErrors, dismissError } =
+    const { images, isUploading, errors, addImages, updateImage, removeImage, clearImages, clearErrors, dismissError } =
         useImageUpload();
 
     const { selectedImageId, selectedImage, batchSummary, selectImage } =
@@ -57,9 +57,20 @@ export const CropifyApp: React.FC = () => {
     const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
 
     // 当选中图片变化时，重置裁剪参数
+    // 当选中图片变化时，重置裁剪参数（优先使用已保存的参数）
     useEffect(() => {
-        resetCropParams(selectedImage);
+        resetCropParams(selectedImage, selectedImage?.cropParams);
     }, [selectedImage, resetCropParams]);
+
+    // 自动保存裁剪参数到图片对象 (使用防抖避免频繁更新)
+    useEffect(() => {
+        if (selectedImageId && cropParams) {
+             const timer = setTimeout(() => {
+                updateImage(selectedImageId, { cropParams });
+             }, 500);
+             return () => clearTimeout(timer);
+        }
+    }, [cropParams, selectedImageId, updateImage]);
 
     // 判断是否为编辑模式
     const isEditMode = images && images.length > 0;

@@ -215,6 +215,74 @@ export const QualityControlPanel: React.FC<QualityControlPanelProps> = ({
           </div>
         </div>
 
+        {/* 目标尺寸缩放设置 */}
+        <div className="pt-3 border-t border-gray-200">
+          <h4 className="text-sm font-medium text-gray-700 mb-3">目标尺寸缩放 (AI训练)</h4>
+          <div className="space-y-3">
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={outputSettings.resizeTarget?.enabled || false}
+                onChange={(e) => {
+                    const enabled = e.target.checked;
+                    onSettingsChange({
+                        ...outputSettings,
+                        resizeTarget: {
+                            enabled,
+                            width: outputSettings.resizeTarget?.width || 1024,
+                            height: outputSettings.resizeTarget?.height || 1024
+                        }
+                    });
+                }}
+                className="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <span className="text-sm text-gray-700">启用强制缩放</span>
+            </label>
+
+            {outputSettings.resizeTarget?.enabled && (
+               <div className="grid grid-cols-2 gap-2">
+                 <div>
+                   <label className="block text-xs text-gray-500 mb-1">宽度 (px)</label>
+                   <input
+                     type="number"
+                     value={outputSettings.resizeTarget.width}
+                     onChange={(e) => {
+                        const width = parseInt(e.target.value) || 1024;
+                        onSettingsChange({
+                            ...outputSettings,
+                            resizeTarget: {
+                                ...outputSettings.resizeTarget!,
+                                width
+                            }
+                        });
+                     }}
+                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                   />
+                 </div>
+                 <div>
+                   <label className="block text-xs text-gray-500 mb-1">高度 (px)</label>
+                   <input
+                     type="number"
+                     value={outputSettings.resizeTarget.height}
+                     onChange={(e) => {
+                        const height = parseInt(e.target.value) || 1024;
+                        onSettingsChange({
+                            ...outputSettings,
+                            resizeTarget: {
+                                ...outputSettings.resizeTarget!,
+                                height
+                            }
+                        });
+                     }}
+                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                   />
+                 </div>
+               </div>
+            )}
+            <p className="text-xs text-gray-500">如果不启用，则导出实际裁剪尺寸。</p>
+          </div>
+        </div>
+
         {/* 预估信息 */}
         <div className="pt-3 border-t border-gray-200">
           <h4 className="text-sm font-medium text-gray-700 mb-2">输出预估</h4>

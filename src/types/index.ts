@@ -8,9 +8,11 @@ export interface ImageFile {
   width: number; // 图片宽度
   height: number; // 图片高度
   url: string; // 预览URL
+  thumbnailUrl: string; // 缩略图URL (用于列表显示)
   dpi?: number; // DPI信息
   colorMode?: string; // 色彩模式
   lastModified: number;
+  cropParams?: CropParams; // 保存的裁剪参数
 }
 
 // 裁剪参数定义
@@ -55,6 +57,11 @@ export interface OutputSettings {
   maintainOriginalName?: boolean;
   filenamePrefix?: string;
   filenameSuffix?: string;
+  resizeTarget?: { // 目标尺寸缩放设置
+    enabled: boolean;
+    width: number;
+    height: number;
+  };
 }
 
 // 批处理状态

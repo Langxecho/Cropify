@@ -10,6 +10,7 @@ interface UseImageUploadReturn {
   isUploading: boolean;
   errors: AppError[];
   addImages: (files: File[]) => Promise<void>;
+  updateImage: (id: string, updates: Partial<ImageFile>) => void;
   removeImage: (id: string) => void;
   clearImages: () => void;
   clearErrors: () => void;
@@ -43,13 +44,6 @@ export function useImageUpload(): UseImageUploadReturn {
     // 检查文件格式
     if (!isValidImageFile(file, APP_CONFIG.SUPPORTED_INPUT_FORMATS)) {
       addError('upload', ERROR_MESSAGES.UNSUPPORTED_FORMAT, `文件：${file.name}`);
-      return false;
-    }
-
-    // 检查文件大小
-    const maxSizeBytes = APP_CONFIG.MAX_FILE_SIZE * 1024 * 1024;
-    if (file.size > maxSizeBytes) {
-      addError('upload', ERROR_MESSAGES.FILE_TOO_LARGE(APP_CONFIG.MAX_FILE_SIZE), `文件：${file.name}`);
       return false;
     }
 
@@ -102,6 +96,9 @@ export function useImageUpload(): UseImageUploadReturn {
       if (imageToRemove?.url) {
         URL.revokeObjectURL(imageToRemove.url);
       }
+      if (imageToRemove?.thumbnailUrl) {
+         URL.revokeObjectURL(imageToRemove.thumbnailUrl);
+      }
       return prev.filter(img => img.id !== id);
     });
   }, []);
@@ -112,6 +109,9 @@ export function useImageUpload(): UseImageUploadReturn {
     images.forEach(image => {
       if (image.url) {
         URL.revokeObjectURL(image.url);
+      }
+      if (image.thumbnailUrl) {
+        URL.revokeObjectURL(image.thumbnailUrl);
       }
     });
     setImages([]);
@@ -128,11 +128,19 @@ export function useImageUpload(): UseImageUploadReturn {
     setErrors(prev => prev.filter(error => error.id !== id));
   }, []);
 
+  // 更新图片信息
+  const updateImage = useCallback((id: string, updates: Partial<ImageFile>) => {
+    setImages(prev => prev.map(img => 
+      img.id === id ? { ...img, ...updates } : img
+    ));
+  }, []);
+
   return {
     images,
     isUploading,
     errors,
     addImages,
+    updateImage,
     removeImage,
     clearImages,
     clearErrors,

@@ -2,9 +2,9 @@ import { PresetSize } from '@/types';
 
 // 应用配置常量
 export const APP_CONFIG = {
-  MAX_BATCH_SIZE: 50, // 默认最大批处理数量
-  MAX_BATCH_SIZE_LIMIT: 100, // 最大批处理数量上限
-  MAX_FILE_SIZE: 10, // 单文件最大大小（MB）
+  MAX_BATCH_SIZE: 1000, // 默认最大批处理数量
+  MAX_BATCH_SIZE_LIMIT: 2000, // 最大批处理数量上限
+  MAX_FILE_SIZE: 1024, // 单文件最大大小（MB）
   SUPPORTED_INPUT_FORMATS: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/bmp', 'image/tiff', 'image/gif'] as string[],
   SUPPORTED_OUTPUT_FORMATS: ['jpg', 'png', 'webp'],
   DEFAULT_QUALITY: 85,

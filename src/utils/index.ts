@@ -34,21 +34,48 @@ export async function getImageMetadata(file: File): Promise<ImageFile> {
     const url = URL.createObjectURL(file);
     
     img.onload = () => {
-      const imageFile: ImageFile = {
-        id: generateId(),
-        file,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        width: img.naturalWidth,
-        height: img.naturalHeight,
-        url,
-        lastModified: file.lastModified,
-      };
+      // 生成缩略图
+      const canvas = document.createElement('canvas');
+      const MAX_THUMB_SIZE = 200;
+      let thumbWidth = img.naturalWidth;
+      let thumbHeight = img.naturalHeight;
       
-      // 尝试获取DPI信息（如果可用）
-      // 注: 实际DPI获取需要更复杂的EXIF解析
-      resolve(imageFile);
+      if (thumbWidth > thumbHeight) {
+        if (thumbWidth > MAX_THUMB_SIZE) {
+          thumbHeight = Math.round((thumbHeight * MAX_THUMB_SIZE) / thumbWidth);
+          thumbWidth = MAX_THUMB_SIZE;
+        }
+      } else {
+        if (thumbHeight > MAX_THUMB_SIZE) {
+          thumbWidth = Math.round((thumbWidth * MAX_THUMB_SIZE) / thumbHeight);
+          thumbHeight = MAX_THUMB_SIZE;
+        }
+      }
+      
+      canvas.width = thumbWidth;
+      canvas.height = thumbHeight;
+      const ctx = canvas.getContext('2d');
+      ctx?.drawImage(img, 0, 0, thumbWidth, thumbHeight);
+      
+      // 导出缩略图URL
+      canvas.toBlob((blob) => {
+         const thumbnailUrl = blob ? URL.createObjectURL(blob) : url;
+
+         const imageFile: ImageFile = {
+            id: generateId(),
+            file,
+            name: file.name,
+            size: file.size,
+            type: file.type,
+            width: img.naturalWidth,
+            height: img.naturalHeight,
+            url, // 保留原图URL用于编辑
+            thumbnailUrl, // 列表使用的缩略图
+            lastModified: file.lastModified,
+          };
+          
+          resolve(imageFile);
+      }, 'image/jpeg', 0.7);
     };
     
     img.onerror = () => {

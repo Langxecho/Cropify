@@ -69,7 +69,7 @@ export const ImageList: React.FC<ImageListProps> = ({
                 {/* 小缩略图 */}
                 <div className="flex-shrink-0 w-8 h-8 bg-gray-100 rounded overflow-hidden">
                   <img
-                    src={image.url}
+                    src={image.thumbnailUrl}
                     alt={image.name}
                     className="w-full h-full object-cover"
                     loading="lazy"
