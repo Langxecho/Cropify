@@ -19,6 +19,7 @@ export * from './useCropParams';
 export * from './useResizeScaling'; // New hook
 export * from './useViewSettings';
 export * from './useOutputSettings';
+export * from './useImageFilter'; // New hook
 
 // 批处理管理 Hook
 export { useBatchProcessor } from './useBatchProcessor';

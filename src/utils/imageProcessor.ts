@@ -225,4 +225,41 @@ export class ImageProcessor {
       height: Math.ceil(rotatedHeight)
     };
   }
+
+  /**
+   * 等比例缩放图片
+   * @param imageElement 原始图片
+   * @param scaleFactor 缩放因子 (e.g. 1.5 = 1/1.5)
+   * @returns Promise<Blob>
+   */
+  async resizeImageProportionally(imageElement: HTMLImageElement, scaleFactor: number): Promise<Blob> {
+    const width = Math.round(imageElement.width / scaleFactor);
+    const height = Math.round(imageElement.height / scaleFactor);
+
+    // 创建临时画布
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+        throw new Error('无法获取Canvas上下文');
+    }
+
+    // 高质量缩放
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    
+    ctx.drawImage(imageElement, 0, 0, width, height);
+
+    return new Promise((resolve, reject) => {
+        canvas.toBlob((blob) => {
+            if (blob) {
+                resolve(blob);
+            } else {
+                reject(new Error('图片缩放失败'));
+            }
+        }, 'image/png');
+    });
+  }
 }

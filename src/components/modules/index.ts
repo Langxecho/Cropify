@@ -7,6 +7,7 @@ export { ImageImportManager } from './ImageImportManager';
 // 信息展示相关组件
 export { ImageInfoPanel } from './ImageInfoPanel';
 export { ImageNavigationPanel } from './ImageNavigationPanel';
+export { ImageFilterPanel } from './ImageFilterPanel'; // New
 
 // 预览系统相关组件
 export { PreviewSystem } from './PreviewSystem';
@@ -23,3 +24,4 @@ export { QualityControlPanel } from './QualityControlPanel';
 export { BatchProcessor } from './BatchProcessor';
 export { ExportSystem } from './ExportSystem';
 export { ExportModal } from './ExportModal';
+export { BatchResizeView } from './BatchResizeView'; // New

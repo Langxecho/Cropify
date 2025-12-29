@@ -82,7 +82,9 @@ export interface ProcessTask {
   imageId: string;
   status: ProcessStatus;
   progress: number; // 0-100
-  cropParams: CropParams;
+  processType: 'crop' | 'resize'; // 任务类型
+  cropParams?: CropParams; // 仅 crop 类型需要
+  resizeSettings?: ProportionalResizeSettings; // 仅 resize 类型需要
   outputSettings: OutputSettings;
   error?: string;
   processedUrl?: string; // 处理后的图片URL
@@ -118,4 +120,19 @@ export interface AppError {
   message: string;
   details?: string;
   timestamp: number;
+}
+
+// 应用标签页类型
+export type AppTab = 'crop' | 'resize';
+
+// 筛选设置
+export interface FilterSettings {
+  minWidth?: number;
+  minHeight?: number;
+}
+
+// 等比例缩放设置
+export interface ProportionalResizeSettings {
+  scaleFactor: number; // 缩放因子，例如 1.5 表示缩小 1.5 倍
+  mode: 'scale_down' | 'percentage'; // 目前仅支持缩小倍数
 }

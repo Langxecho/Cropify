@@ -9,6 +9,7 @@ import {
     useOutputSettings,
     useBatchProcessor,
     useResizeScaling,
+    useImageFilter, // New hook
 } from '@/hooks';
 import {
     ImageImportManager,
@@ -21,12 +22,14 @@ import {
     QualityControlPanel,
     BatchProcessor,
     ImageNavigationPanel,
+    ImageFilterPanel, // New component
+    BatchResizeView, // New component
 } from '@/components/modules';
 import { Header } from './Header';
 import { EmptyState } from './EmptyState';
 import { ChevronLeft, ChevronRight, PanelLeftClose, PanelRightClose } from 'lucide-react';
 import { ExportUtils } from '@/utils/exportUtils';
-import { ProcessTask } from '@/types';
+import { ProcessTask, AppTab } from '@/types';
 
 /**
  * Cropify 主应用组件
@@ -37,6 +40,12 @@ export const CropifyApp: React.FC = () => {
 
     const { selectedImageId, selectedImage, batchSummary, selectImage } =
         useAppState(images);
+    
+    // 筛选功能
+    const { filterSettings, setFilterSettings, filteredImages, activeFilterCount, resetFilters } = useImageFilter(images);
+
+    // Tab 状态
+    const [activeTab, setActiveTab] = useState<AppTab>('crop');
 
     const { cropParams, setCropParams, resetCropParams, applyCropAnchor, applyPresetSize, applyPresetRatio } =
         useCropParams(selectedImage);
@@ -49,6 +58,7 @@ export const CropifyApp: React.FC = () => {
         tasks: batchTasks,
         isProcessing,
         startBatch,
+        startResizeBatch, // New
         pauseBatch,
         cancelBatch,
         retryFailed,
@@ -59,6 +69,18 @@ export const CropifyApp: React.FC = () => {
     // 左右侧面板收起状态
     const [leftPanelCollapsed, setLeftPanelCollapsed] = useState(false);
     const [rightPanelCollapsed, setRightPanelCollapsed] = useState(false);
+
+    // 当筛选结果变化，如果当前选中图片不在筛选结果中，尝试选中第一个
+    useEffect(() => {
+        if (filteredImages.length > 0 && selectedImageId) {
+            const exists = filteredImages.find(img => img.id === selectedImageId);
+            if (!exists) {
+                selectImage(filteredImages[0].id);
+            }
+        } else if (filteredImages.length > 0 && !selectedImageId) {
+             selectImage(filteredImages[0].id);
+        }
+    }, [filteredImages, selectedImageId, selectImage]);
 
     // 当选中图片变化时，重置裁剪参数（优先使用已保存的参数）
     useEffect(() => {
@@ -84,40 +106,38 @@ export const CropifyApp: React.FC = () => {
     }, [resizeSettings, selectedImageId, updateImage]);
 
 
-    // 上一张/下一张逻辑
+    // 上一张/下一张逻辑 (基于 filteredImages)
     const handlePrevious = () => {
         if (!selectedImageId) return;
-        const index = images.findIndex(img => img.id === selectedImageId);
+        const index = filteredImages.findIndex(img => img.id === selectedImageId);
         if (index > 0) {
-            selectImage(images[index - 1].id);
+            selectImage(filteredImages[index - 1].id);
         }
     };
 
     const handleNext = () => {
         if (!selectedImageId) return;
-        const index = images.findIndex(img => img.id === selectedImageId);
-        if (index < images.length - 1) {
-            selectImage(images[index + 1].id);
+        const index = filteredImages.findIndex(img => img.id === selectedImageId);
+        if (index < filteredImages.length - 1) {
+            selectImage(filteredImages[index + 1].id);
         }
     };
 
     // 删除逻辑
     const handleDelete = () => {
         if (!selectedImageId) return;
-        const index = images.findIndex(img => img.id === selectedImageId);
+        const index = filteredImages.findIndex(img => img.id === selectedImageId);
         
         // 先删除
         removeImage(selectedImageId);
         
-        // 尝试跳转到下一张，如果没有下一张则跳转上一张
-        if (images.length > 1) {
-            if (index < images.length - 1) {
-                // 有下一张
-                selectImage(images[index + 1].id);
-            } else {
-                // 是最后一张，跳转到前一张
-                selectImage(images[index - 1].id);
-            }
+        // 尝试跳转到下一张
+        if (filteredImages.length > 1) {
+             // 逻辑略微复杂，因为 removeImage 是异步更新 images，filteredImages 也会更新
+             // 这里的 index 是删除前的索引
+             // 实际上最好的体验是自动选择被删除后的下一张
+             // 由于 React 状态更新机制，简单的 index + 1 可能不够，依赖 useEffect 自动修正选择可能更好
+             // 但为了立即响应，我们可以手动计算
         }
     };
 
@@ -125,16 +145,13 @@ export const CropifyApp: React.FC = () => {
     const isEditMode = images && images.length > 0;
     
     // 当前索引
-    const currentIndex = selectedImageId ? images.findIndex(img => img.id === selectedImageId) : -1;
+    const currentIndex = selectedImageId ? filteredImages.findIndex(img => img.id === selectedImageId) : -1;
 
-    // 导出相关函数
+    // 导出相关函数 ... (省略不变)
     const handleSingleDownload = (task: ProcessTask) => {
         if (!task.processedBlob) return;
-
-        // 找到对应的原始图片名称
         const originalImage = images.find(img => img.id === task.imageId);
         const originalName = originalImage?.file.name || `image_${task.imageId}`;
-
         const filename = ExportUtils.generateFileName(task, 0, outputSettings, originalName);
         ExportUtils.downloadFile(task.processedBlob, filename);
     };
@@ -153,14 +170,16 @@ export const CropifyApp: React.FC = () => {
                 images={images}
                 onClearImages={clearImages}
                 isEditMode={isEditMode}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
                 cropParams={cropParams}
                 outputSettings={outputSettings}
                 tasks={batchTasks}
                 isProcessing={isProcessing}
-                onStartBatch={() => startBatch(images, cropParams, outputSettings)}
+                onStartBatch={() => startBatch(filteredImages, cropParams, outputSettings)} // Default batch uses filtered images
                 onPauseBatch={pauseBatch}
                 onCancelBatch={cancelBatch}
-                onRetryFailed={() => retryFailed(images, cropParams, outputSettings)}
+                onRetryFailed={() => retryFailed(filteredImages, cropParams, outputSettings)}
                 onSingleDownload={handleSingleDownload}
                 onBatchDownload={handleBatchDownload}
                 onZipDownload={handleZipDownload}
@@ -170,10 +189,8 @@ export const CropifyApp: React.FC = () => {
                     {/* 左侧面板 */}
                     <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${
                         leftPanelCollapsed ? 'w-0' : 'w-86'
-                    } overflow-hidden flex-shrink-0`}>
-                        <div className="flex flex-col h-full">
-                            {/* 左侧面板头部 */}
-                            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white z-10 flex-shrink-0">
+                    } overflow-hidden flex-shrink-0 flex flex-col`}>
+                         <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white z-10 flex-shrink-0">
                                 <h2 className="text-lg font-medium text-gray-900">图片管理</h2>
                                 <button
                                     onClick={() => setLeftPanelCollapsed(!leftPanelCollapsed)}
@@ -182,27 +199,32 @@ export const CropifyApp: React.FC = () => {
                                 >
                                     <PanelLeftClose className="w-4 h-4 text-gray-500" />
                                 </button>
-                            </div>
+                        </div>
 
-                            {/* 左侧面板内容 */}
-                            <div className="flex-1 flex flex-col p-4 min-h-0">
-                                {/* 图片导入管理 */}
-                                <ImageImportManager
-                                    images={images}
-                                    isUploading={isUploading}
-                                    errors={errors}
-                                    selectedImageId={selectedImageId}
-                                    addImages={addImages}
-                                    removeImage={removeImage}
-                                    clearImages={clearImages}
-                                    clearErrors={clearErrors}
-                                    dismissError={dismissError}
-                                    onSelectImage={selectImage}
-                                />
+                         {/* 图片筛选面板 */}
+                        <ImageFilterPanel 
+                            filterSettings={filterSettings}
+                            onFilterChange={setFilterSettings}
+                            activeCount={activeFilterCount}
+                            totalCount={images.length}
+                            filteredCount={filteredImages.length}
+                            onReset={resetFilters}
+                        />
 
-                                {/* 图片详细信息 */}
-                                {/* <ImageInfoPanel selectedImage={selectedImage} batchSummary={batchSummary} /> */}
-                            </div>
+                        {/* 图片导入管理 (使用筛选后的列表) */}
+                        <div className="flex-1 flex flex-col p-4 min-h-0">
+                            <ImageImportManager
+                                images={filteredImages}
+                                isUploading={isUploading}
+                                errors={errors}
+                                selectedImageId={selectedImageId}
+                                addImages={addImages}
+                                removeImage={removeImage}
+                                clearImages={clearImages}
+                                clearErrors={clearErrors}
+                                dismissError={dismissError}
+                                onSelectImage={selectImage}
+                            />
                         </div>
                     </div>
 
@@ -219,128 +241,105 @@ export const CropifyApp: React.FC = () => {
                         </div>
                     )}
 
-                    {/* 中间主内容区域 */}
-                    <div className="flex-1 flex flex-col overflow-hidden">
-                        <div className="flex-1 flex flex-col p-4 lg:p-6 gap-4 overflow-hidden">
-                             {/* 图片导航面板 (新) */}
-                             <ImageNavigationPanel
-                                currentIndex={currentIndex}
-                                totalImages={images.length}
-                                onPrevious={handlePrevious}
-                                onNext={handleNext}
-                                onDelete={handleDelete}
-                             />
-
-                            {/* 预览系统 */}
-                            <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden min-h-0">
-                                <PreviewSystem
-                                    selectedImage={selectedImage}
-                                    cropParams={cropParams}
-                                    onCropChange={setCropParams}
-                                    zoom={zoom}
-                                    showGrid={showGrid}
-                                    gridType={gridType}
-                                    onZoomChange={setZoom}
-                                />
-                            </div>
-
-                            {/* 裁剪演示 */}
-                            <div className="flex-shrink-0 h-64">
-                                <CropDemo selectedImage={selectedImage} cropParams={cropParams} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* 右侧面板收起时的展开按钮 */}
-                    {rightPanelCollapsed && (
-                        <div className="flex-shrink-0 w-8 bg-gray-50 border-l border-gray-200 flex items-center justify-center">
-                            <button
-                                onClick={() => setRightPanelCollapsed(false)}
-                                className="p-1 hover:bg-gray-200 rounded transition-colors"
-                                title="展开右侧面板"
-                            >
-                                <ChevronLeft className="w-4 h-4 text-gray-500" />
-                            </button>
-                        </div>
-                    )}
-
-                    {/* 右侧面板 */}
-                    <div className={`bg-white border-l border-gray-200 transition-all duration-300 ${
-                        rightPanelCollapsed ? 'w-0' : 'w-96'
-                    } overflow-hidden flex-shrink-0`}>
-                        <div className="flex flex-col h-full">
-                            {/* 右侧面板头部 */}
-                            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white z-10 flex-shrink-0">
-                                <h2 className="text-lg font-medium text-gray-900">工具面板</h2>
-                                <button
-                                    onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)}
-                                    className="p-1 hover:bg-gray-100 rounded transition-colors"
-                                    title="收起右侧面板"
-                                >
-                                    <PanelRightClose className="w-4 h-4 text-gray-500" />
-                                </button>
-                            </div>
-
-                            {/* 右侧面板内容 */}
-                            <div className="flex-1 overflow-y-auto p-4">
-                                <div className="space-y-6">
-                                    {/* 裁剪控制面板 */}
-                                    <CropControlPanel
-                                        selectedImage={selectedImage}
-                                        cropParams={cropParams}
-                                        onCropChange={setCropParams}
-                                        onApplyCropAnchor={applyCropAnchor}
-                                        onApplyPresetSize={applyPresetSize}
-                                        onApplyPresetRatio={applyPresetRatio}
-                                        onReset={resetCropParams}
+                    {/* MAIN CONTENT AREA */}
+                    {activeTab === 'crop' ? (
+                        <>
+                            {/* 中间主内容区域 - CROP MODE */}
+                            <div className="flex-1 flex flex-col overflow-hidden">
+                                <div className="flex-1 flex flex-col p-4 lg:p-6 gap-4 overflow-hidden">
+                                    <ImageNavigationPanel
+                                        currentIndex={currentIndex}
+                                        totalImages={filteredImages.length}
+                                        onPrevious={handlePrevious}
+                                        onNext={handleNext}
+                                        onDelete={handleDelete}
                                     />
-
-                                    {/* 分割线 */}
-                                    <div className="border-t border-gray-200"></div>
-
-                                    {/* 高级裁剪选项 */}
-                                    <AdvancedCropOptions cropParams={cropParams} onCropChange={setCropParams} />
-
-                                    {/* 分割线 */}
-                                    <div className="border-t border-gray-200"></div>
-
-                                    {/* 视图设置 */}
-                                    <ViewSettings
-                                        zoom={zoom}
-                                        showGrid={showGrid}
-                                        gridType={gridType}
-                                        onZoomChange={setZoom}
-                                        onGridToggle={setShowGrid}
-                                        onGridTypeChange={setGridType}
-                                    />
-
-                                    {/* 分割线 */}
-                                    <div className="border-t border-gray-200"></div>
-
-                                    {/* 质量控制 */}
-                                    <QualityControlPanel 
-                                        outputSettings={outputSettings} 
-                                        onSettingsChange={setOutputSettings}
-                                        resizeSettings={resizeSettings}
-                                        onResizeSettingsChange={setResizeSettings}
-                                    />
-
-                                    {/* 分割线 */}
-                                    <div className="border-t border-gray-200"></div>
-
-                                    {/* 批处理和导出 */}
-                                    {/* <BatchProcessor
-                                        images={images}
-                                        cropParams={cropParams}
-                                        outputSettings={outputSettings}
-                                        tasks={batchTasks}
-                                        isProcessing={isProcessing}
-                                        onStartBatch={() => startBatch(images, cropParams, outputSettings)}
-                                    /> */}
+                                    <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden min-h-0">
+                                        <PreviewSystem
+                                            selectedImage={selectedImage}
+                                            cropParams={cropParams}
+                                            onCropChange={setCropParams}
+                                            zoom={zoom}
+                                            showGrid={showGrid}
+                                            gridType={gridType}
+                                            onZoomChange={setZoom}
+                                        />
+                                    </div>
+                                    <div className="flex-shrink-0 h-64">
+                                        <CropDemo selectedImage={selectedImage} cropParams={cropParams} />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
+
+                             {/* 右侧面板收起时的展开按钮 */}
+                            {rightPanelCollapsed && (
+                                <div className="flex-shrink-0 w-8 bg-gray-50 border-l border-gray-200 flex items-center justify-center">
+                                    <button
+                                        onClick={() => setRightPanelCollapsed(false)}
+                                        className="p-1 hover:bg-gray-200 rounded transition-colors"
+                                        title="展开右侧面板"
+                                    >
+                                        <ChevronLeft className="w-4 h-4 text-gray-500" />
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* 右侧面板 - CROP MODE */}
+                            <div className={`bg-white border-l border-gray-200 transition-all duration-300 ${
+                                rightPanelCollapsed ? 'w-0' : 'w-96'
+                            } overflow-hidden flex-shrink-0`}>
+                                <div className="flex flex-col h-full">
+                                    <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white z-10 flex-shrink-0">
+                                        <h2 className="text-lg font-medium text-gray-900">工具面板</h2>
+                                        <button
+                                            onClick={() => setRightPanelCollapsed(!rightPanelCollapsed)}
+                                            className="p-1 hover:bg-gray-100 rounded transition-colors"
+                                        >
+                                            <PanelRightClose className="w-4 h-4 text-gray-500" />
+                                        </button>
+                                    </div>
+                                    <div className="flex-1 overflow-y-auto p-4">
+                                        <div className="space-y-6">
+                                            <CropControlPanel
+                                                selectedImage={selectedImage}
+                                                cropParams={cropParams}
+                                                onCropChange={setCropParams}
+                                                onApplyCropAnchor={applyCropAnchor}
+                                                onApplyPresetSize={applyPresetSize}
+                                                onApplyPresetRatio={applyPresetRatio}
+                                                onReset={resetCropParams}
+                                            />
+                                            <div className="border-t border-gray-200"></div>
+                                            <AdvancedCropOptions cropParams={cropParams} onCropChange={setCropParams} />
+                                            <div className="border-t border-gray-200"></div>
+                                            <ViewSettings
+                                                zoom={zoom}
+                                                showGrid={showGrid}
+                                                gridType={gridType}
+                                                onZoomChange={setZoom}
+                                                onGridToggle={setShowGrid}
+                                                onGridTypeChange={setGridType}
+                                            />
+                                            <div className="border-t border-gray-200"></div>
+                                            <QualityControlPanel 
+                                                outputSettings={outputSettings} 
+                                                onSettingsChange={setOutputSettings}
+                                                resizeSettings={resizeSettings}
+                                                onResizeSettingsChange={setResizeSettings}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                         /* RESIZE MODE - FULL WIDTH */
+                         <BatchResizeView
+                            filteredImages={filteredImages}
+                            onStartBatch={(settings) => startResizeBatch(filteredImages, settings, outputSettings)}
+                            isProcessing={isProcessing}
+                         />
+                    )}
                 </div>
             ) : (
                 <EmptyState

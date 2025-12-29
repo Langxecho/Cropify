@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ImageFile, CropParams, OutputSettings, ProcessTask, ProcessStatus } from '@/types';
+import { ImageFile, CropParams, OutputSettings, ProcessTask, ProcessStatus, AppTab } from '@/types';
 import { Button, Logo } from '@/components/ui';
 import { ExportModal } from '@/components/modules';
+import { Crop, Scaling, Grip } from 'lucide-react';
 
 interface HeaderProps {
     images?: ImageFile[];
     onClearImages: () => void;
     isEditMode?: boolean;
+    activeTab?: AppTab;
+    onTabChange?: (tab: AppTab) => void;
     // 批处理相关props
     cropParams?: CropParams;
     outputSettings?: OutputSettings;
@@ -31,6 +34,8 @@ export const Header: React.FC<HeaderProps> = ({
     images,
     onClearImages,
     isEditMode = false,
+    activeTab = 'crop',
+    onTabChange,
     cropParams,
     outputSettings,
     tasks = [],
@@ -50,8 +55,6 @@ export const Header: React.FC<HeaderProps> = ({
         completed: tasks.filter(t => t.status === ProcessStatus.COMPLETED).length,
         failed: tasks.filter(t => t.status === ProcessStatus.FAILED).length,
         processing: tasks.filter(t => t.status === ProcessStatus.PROCESSING).length,
-        pending: tasks.filter(t => t.status === ProcessStatus.PENDING).length,
-        cancelled: tasks.filter(t => t.status === ProcessStatus.CANCELLED).length,
     };
 
     const hasErrors = stats.failed > 0;
@@ -61,24 +64,42 @@ export const Header: React.FC<HeaderProps> = ({
             <header className="bg-gradient-to-r from-blue-600 to-purple-700 shadow-sm flex-shrink-0">
                 <div className="px-6 py-3">
                     <div className="flex items-center justify-between">
-                        {/* 左侧：Logo 和应用名称 */}
-                        <Logo
-                            size="sm"
-                            variant="white"
-                            showText={true}
-                            className="flex-shrink-0"
-                        />
-
-                        <div className="text-white text-sm">
-                            为爱发电 ❤️{' '}
-                            <a
-                                href="https://yaolifeng.com/sponsor.html"
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-white underline hover:text-blue-300 hover:underline transition-colors"
-                            >
-                                yaolifeng
-                            </a>
+                        {/* 左侧：Logo 和 Tab切换 */}
+                        <div className="flex items-center space-x-8">
+                             <Logo
+                                size="sm"
+                                variant="white"
+                                showText={true}
+                                className="flex-shrink-0"
+                            />
+                            
+                            {/* 功能切换 Tab */}
+                            {onTabChange && (
+                                <div className="flex bg-blue-800/40 rounded-lg p-1 backdrop-blur-sm">
+                                    <button
+                                        onClick={() => onTabChange('crop')}
+                                        className={`flex items-center px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                            activeTab === 'crop' 
+                                            ? 'bg-white text-blue-700 shadow-sm' 
+                                            : 'text-blue-100 hover:bg-white/10'
+                                        }`}
+                                    >
+                                        <Crop className="w-4 h-4 mr-2" />
+                                        智能裁剪
+                                    </button>
+                                    <button
+                                        onClick={() => onTabChange('resize')}
+                                        className={`flex items-center px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                                            activeTab === 'resize' 
+                                            ? 'bg-white text-purple-700 shadow-sm' 
+                                            : 'text-purple-100 hover:bg-white/10'
+                                        }`}
+                                    >
+                                        <Scaling className="w-4 h-4 mr-2" />
+                                        批量缩放
+                                    </button>
+                                </div>
+                            )}
                         </div>
 
                         {/* 右侧：状态信息和操作 */}
@@ -109,8 +130,8 @@ export const Header: React.FC<HeaderProps> = ({
                                         <span className="sm:hidden">清空</span>
                                     </Button>
 
-                                     {/* 批处理控制按钮 */}
-                                     {onStartBatch && !isProcessing && (
+                                     {/* 批处理控制按钮 - 仅在 crop 模式显示，resize 模式有自己的按钮 */}
+                                     {onStartBatch && !isProcessing && activeTab === 'crop' && (
                                         <Button
                                             variant="outline"
                                             size="sm"
