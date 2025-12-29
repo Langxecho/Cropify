@@ -8,12 +8,14 @@ interface BatchResizeViewProps {
   filteredImages: ImageFile[];
   onStartBatch: (settings: ProportionalResizeSettings) => void;
   isProcessing: boolean;
+  onUpdateImage: (imageId: string, updates: Partial<ImageFile>) => void; // New prop
 }
 
 export const BatchResizeView: React.FC<BatchResizeViewProps> = ({
   filteredImages,
   onStartBatch,
   isProcessing,
+  onUpdateImage,
 }) => {
   // 本地管理缩放设置
   const [resizeSettings, setResizeSettings] = useState<ProportionalResizeSettings>({
@@ -22,10 +24,11 @@ export const BatchResizeView: React.FC<BatchResizeViewProps> = ({
   });
 
   // 计算缩放后的尺寸
-  const calculateNewSize = (width: number, height: number) => {
+  const calculateNewSize = (width: number, height: number, imageScaleFactor?: number) => {
+    const factor = imageScaleFactor || resizeSettings.scaleFactor;
     return {
-      width: Math.round(width / resizeSettings.scaleFactor),
-      height: Math.round(height / resizeSettings.scaleFactor),
+      width: Math.round(width / factor),
+      height: Math.round(height / factor),
     };
   };
 
@@ -45,7 +48,7 @@ export const BatchResizeView: React.FC<BatchResizeViewProps> = ({
                     <div className="h-10 w-px bg-gray-200"></div>
 
                     <div className="flex items-center space-x-3">
-                        <label className="text-sm font-medium text-gray-700">缩小倍数:</label>
+                        <label className="text-sm font-medium text-gray-700">默认缩小倍数:</label>
                         <div className="relative">
                             <input
                                 type="number"
@@ -89,7 +92,7 @@ export const BatchResizeView: React.FC<BatchResizeViewProps> = ({
                 <p>
                     示例: 如果原图是 3000x3000，缩小倍数设为 1.5，则输出尺寸为 2000x2000 (3000 / 1.5)。
                     <br/>
-                    此操作仅影响从本页面导出的图片，不会影响"智能裁剪"页面的设置。
+                    下方列表可单独设置每张图片的缩放倍数，留空则使用默认倍数。
                 </p>
             </div>
         </div>
@@ -97,29 +100,51 @@ export const BatchResizeView: React.FC<BatchResizeViewProps> = ({
         {/* 图片列表预览 */}
         <div className="flex-1 bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden flex flex-col">
             <div className="px-6 py-4 border-b border-gray-200 font-medium text-gray-700 bg-gray-50 grid grid-cols-12 gap-4">
-                <div className="col-span-5">文件名</div>
-                <div className="col-span-3 text-right">原始尺寸</div>
+                <div className="col-span-4">文件名</div>
+                <div className="col-span-2 text-right">原始尺寸</div>
+                <div className="col-span-3 text-center">自定义倍数</div>
                 <div className="col-span-1 text-center text-gray-400"><ArrowRight className="w-4 h-4 mx-auto"/></div>
-                <div className="col-span-3">目标尺寸</div>
+                <div className="col-span-2">目标尺寸</div>
             </div>
             
             <div className="flex-1 overflow-y-auto">
                 {filteredImages.length > 0 ? (
                     <div className="divide-y divide-gray-100">
                         {filteredImages.map((image) => {
-                            const newSize = calculateNewSize(image.width, image.height);
+                            const newSize = calculateNewSize(image.width, image.height, image.batchResizeScaleFactor);
                             return (
                                 <div key={image.id} className="px-6 py-4 grid grid-cols-12 gap-4 hover:bg-gray-50 transition-colors items-center">
-                                    <div className="col-span-5 truncate font-medium text-gray-900" title={image.name}>
+                                    <div className="col-span-4 truncate font-medium text-gray-900" title={image.name}>
                                         {image.name}
                                     </div>
-                                    <div className="col-span-3 text-right text-gray-500 font-mono text-sm">
+                                    <div className="col-span-2 text-right text-gray-500 font-mono text-sm">
                                         {image.width} x {image.height}
+                                    </div>
+                                    <div className="col-span-3 flex justify-center">
+                                         <div className="relative w-24">
+                                            <input
+                                                type="number"
+                                                min="1"
+                                                step="0.1"
+                                                placeholder={resizeSettings.scaleFactor.toString()}
+                                                value={image.batchResizeScaleFactor || ''}
+                                                onChange={(e) => {
+                                                    const val = parseFloat(e.target.value);
+                                                    onUpdateImage(image.id, { 
+                                                        batchResizeScaleFactor: isNaN(val) ? undefined : val 
+                                                    });
+                                                }}
+                                                className="w-full pl-3 pr-8 py-1.5 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                            />
+                                            <div className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-xs">
+                                                x
+                                            </div>
+                                        </div>
                                     </div>
                                     <div className="col-span-1 text-center text-gray-300">
                                         <ArrowRight className="w-4 h-4 mx-auto"/>
                                     </div>
-                                    <div className="col-span-3 text-blue-600 font-mono text-sm font-medium">
+                                    <div className="col-span-2 text-blue-600 font-mono text-sm font-medium">
                                         {newSize.width} x {newSize.height}
                                     </div>
                                 </div>

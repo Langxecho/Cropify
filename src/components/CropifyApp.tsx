@@ -338,6 +338,7 @@ export const CropifyApp: React.FC = () => {
                             filteredImages={filteredImages}
                             onStartBatch={(settings) => startResizeBatch(filteredImages, settings, outputSettings)}
                             isProcessing={isProcessing}
+                            onUpdateImage={updateImage}
                          />
                     )}
                 </div>

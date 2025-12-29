@@ -14,6 +14,7 @@ export interface ImageFile {
   lastModified: number;
   cropParams?: CropParams; // 保存的裁剪参数
   resizeTarget?: ResizeSettings; // 保存的缩放设置
+  batchResizeScaleFactor?: number; // 批量缩放页面的独立缩放倍数
 }
 
 // 缩放设置定义

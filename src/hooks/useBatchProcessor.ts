@@ -246,16 +246,21 @@ export function useBatchProcessor(onError: (error: AppError) => void): UseBatchP
     outputSettings: OutputSettings
   ) => {
       const newTasks: ProcessTask[] = images.map(image => {
-           // 对于 resize，我们可能总是重新生成，或者检查参数是否变化。此处简单起见总是新建/重置
+           // 优先使用图片个体的缩放倍数，如果没有则使用全局设置
+           const effectiveResizeSettings = image.batchResizeScaleFactor ? {
+               ...resizeSettings,
+               scaleFactor: image.batchResizeScaleFactor
+           } : { ...resizeSettings };
+
            return {
                id: generateId(),
                imageId: image.id,
                status: ProcessStatus.PENDING,
                progress: 0,
                processType: 'resize',
-               resizeSettings: { ...resizeSettings },
+               resizeSettings: effectiveResizeSettings,
                outputSettings: { ...outputSettings },
-               cropParams: { width: 0, height: 0, x: 0, y: 0 } // Dummy params to satisfy type if strict? No, marked optional now.
+               cropParams: { width: 0, height: 0, x: 0, y: 0 } 
            };
       });
 
